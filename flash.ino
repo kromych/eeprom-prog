@@ -17,15 +17,25 @@
 #define EEPROM_D6   11
 #define EEPROM_D7   12
 
+#define WRITE_EN    13  // Active low
+
 /**
- * Set teh adddress
+ * Switch data I/O mode
+ */
+void setDataMode(int mode)
+{
+    for (int pin = EEPROM_D7; pin >= EEPROM_D0; --pin)
+    {
+        pinMode(pin, mode);
+    }
+}
+
+/**
+ * Set the adddress
  */
 void setAddress(int address, bool outputEnable)
 {
     // Output data to the shift registers
-
-    shiftOut(SHIFT_DATA, SHIFT_CLK, MSBFIRST, 0x00);
-    shiftOut(SHIFT_DATA, SHIFT_CLK, MSBFIRST, 0x00);
 
     shiftOut(SHIFT_DATA, SHIFT_CLK, MSBFIRST, ((address >> 8) & 0xff) | (outputEnable ? 0x00 : 0x80));
     shiftOut(SHIFT_DATA, SHIFT_CLK, MSBFIRST, (address & 0xff));
@@ -42,40 +52,65 @@ byte readEEPROM(int address)
 {
     byte data = 0;
 
-    setAddress(address, /*outputEnable*/ true);
+    setDataMode(INPUT);
+    setAddress(address, /*outputEnable*/true);
 
     for (int pin = EEPROM_D7; pin >= EEPROM_D0; --pin)
     {
         data = (data << 1) | digitalRead(pin);
     }
 
+    setAddress(address, /*outputEnable*/false);
+
     return data;
 } 
 
 /**
- * Switch data I/O mode
+ * Write EEPROM
  */
-void setDataMode(int mode)
+void writeEEPROM(int address, byte data)
 {
-    for (int pin = EEPROM_D7; pin >= EEPROM_D0; --pin)
+    // Prevent the EEPROM and Arduino from trying to drive the 
+    // bus at the same time
+
+    delay(10);
+
+    setAddress(address, /*outputEnable*/false);
+    setDataMode(OUTPUT);
+
+    for (int pin = EEPROM_D0; pin <= EEPROM_D7; ++pin)
     {
-        pinMode(pin, mode);
+        digitalWrite(pin, data & 1);
+        data >>= 1;
     }
-}
 
-/** 
- * Set up the board
- */
-void setup()
-{
-    // Set up pin modes
+    // WE is active-low so pulsing it means going
+    // HIGH->LOW->HIGH
 
-    pinMode(SHIFT_DATA, OUTPUT);
-    pinMode(SHIFT_CLK, OUTPUT);
-    pinMode(SHIFT_LATCH, OUTPUT);
+    digitalWrite(WRITE_EN, LOW);
+    delayMicroseconds(1);
+    digitalWrite(WRITE_EN, HIGH);
+    delay(10);
 
     setDataMode(INPUT);
+}
 
+/**
+ * Set the EEPROM content
+ */
+void setEEPROM(int value)
+{
+    for (int address = 0; address <= 2047; ++address)
+    {
+        writeEEPROM(address, value);
+    }
+} 
+
+/**
+ * Dump content
+ */
+void dumpEEPROM()
+{
     Serial.begin(57600); // Had to set that in the Baud Rate dialog, too
 
     for (int base = 0; base <= 255; base += 16)
@@ -99,6 +134,28 @@ void setup()
 
         Serial.println(buf);
     }
+}
+
+/** 
+ * Set up the board
+ */
+void setup()
+{
+    // Set up pin modes
+
+    pinMode(SHIFT_DATA, OUTPUT);
+    pinMode(SHIFT_CLK, OUTPUT);
+    pinMode(SHIFT_LATCH, OUTPUT);
+
+    digitalWrite(WRITE_EN, HIGH);   // Sets the pull-up resistor
+    pinMode(WRITE_EN, OUTPUT);      // Set the mode
+
+    setDataMode(INPUT);
+    setAddress(0x00, false);
+
+    setEEPROM(0xff);
+
+    dumpEEPROM();
 }
 
 /** 
