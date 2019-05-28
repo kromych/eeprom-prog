@@ -111,8 +111,6 @@ void setEEPROM(int value)
  */
 void dumpEEPROM()
 {
-    Serial.begin(57600); // Had to set that in the Baud Rate dialog, too
-
     for (int base = 0; base <= 255; base += 16)
     {
         byte data[16];
@@ -136,12 +134,91 @@ void dumpEEPROM()
     }
 }
 
+/**
+ * Program EEPROM
+ */ 
+void programEEPROM()
+{
+    // Bit patterns for the digits 0..9
+
+    byte digits[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b };
+
+    Serial.println("Programming ones place");
+
+    for (int value = 0; value <= 255; value += 1) 
+    {
+        writeEEPROM(value, digits[value % 10]);
+    }
+
+    Serial.println("Programming tens place");
+
+    for (int value = 0; value <= 255; value += 1) 
+    {
+        writeEEPROM(value + 256, digits[(value / 10) % 10]);
+    }
+
+    Serial.println("Programming hundreds place");
+
+    for (int value = 0; value <= 255; value += 1) 
+    {
+        writeEEPROM(value + 512, digits[(value / 100) % 10]);
+    }
+
+    Serial.println("Programming sign");
+
+    for (int value = 0; value <= 255; value += 1) 
+    {
+        writeEEPROM(value + 768, 0);
+    }
+
+    Serial.println("Programming ones place (twos complement)");
+
+    for (int value = -128; value <= 127; value += 1) 
+    {
+        writeEEPROM((byte)value + 1024, digits[abs(value) % 10]);
+    }
+
+    Serial.println("Programming tens place (twos complement)");
+
+    for (int value = -128; value <= 127; value += 1) 
+    {
+        writeEEPROM((byte)value + 1280, digits[abs(value / 10) % 10]);
+    }
+
+    Serial.println("Programming hundreds place (twos complement)");
+
+    for (int value = -128; value <= 127; value += 1) 
+    {
+        writeEEPROM((byte)value + 1536, digits[abs(value / 100) % 10]);
+    }
+
+    Serial.println("Programming sign (twos complement)");
+
+    for (int value = -128; value <= 127; value += 1) 
+    {
+        if (value < 0) 
+        {
+            writeEEPROM((byte)value + 1792, 0x01);
+        } 
+        else 
+        {
+            writeEEPROM((byte)value + 1792, 0);
+        }
+    }
+}
+
 /** 
  * Set up the board
  */
 void setup()
 {
+    // Had to set that in the Baud Rate dialog, too
+
+    Serial.begin(57600);
+
     // Set up pin modes
+
+    Serial.println("Initializng pins");
 
     pinMode(SHIFT_DATA, OUTPUT);
     pinMode(SHIFT_CLK, OUTPUT);
@@ -153,7 +230,15 @@ void setup()
     setDataMode(INPUT);
     setAddress(0x00, false);
 
+    Serial.println("Erasing EEPROM");
+
     setEEPROM(0xff);
+
+    Serial.println("Programming EEPROM");
+   
+    programEEPROM();
+
+    Serial.println("EEPROM content:");
 
     dumpEEPROM();
 }
