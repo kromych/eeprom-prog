@@ -235,23 +235,23 @@ void program7SegmentDispay()
  *
  */
 
-#define EO      (((unsigned)1) << (unsigned)15) // Sum out to the bus
-#define SU      (((unsigned)1) << (unsigned)14) // Subtract
-#define BI      (((unsigned)1) << (unsigned)13) // Register B in from the bus
-#define OI      (((unsigned)1) << (unsigned)12) // Output register in from the bus
-#define CE      (((unsigned)1) << (unsigned)11) // Program counter enable
-#define CO      (((unsigned)1) << (unsigned)10) // Program counter out to the bus
-#define J       (((unsigned)1) << (unsigned)9)  // Jump == Program counter in from the bus
-#define FI      (((unsigned)1) << (unsigned)8)  // Flag register in from the bus
-#define HLT     (((unsigned)1) << (unsigned)7)  // Halt
-#define MI      (((unsigned)1) << (unsigned)6)  // Memory register in from the bus
-#define RI      (((unsigned)1) << (unsigned)5)  // RAM content in from the bus
-#define RO      (((unsigned)1) << (unsigned)4)  // RAM content out to the bus
-#define IO      (((unsigned)1) << (unsigned)3)  // Instruction regsiter out to the bus
-#define II      (((unsigned)1) << (unsigned)2)  // Instruction regsiter in from the bus
-#define AI      (((unsigned)1) << (unsigned)1)  // Regsiter A in from the bus
-#define AO      (((unsigned)1) << (unsigned)0)  // Regsiter A out to the bus
-#define NOP     0                               // No operation
+#define EO      (1 << 15) // Sum out to the bus
+#define SU      (1 << 14) // Subtract
+#define BI      (1 << 13) // Register B in from the bus
+#define OI      (1 << 12) // Output register in from the bus
+#define CE      (1 << 11) // Program counter enable
+#define CO      (1 << 10) // Program counter out to the bus
+#define J       (1 << 9)  // Jump == Program counter in from the bus
+#define FI      (1 << 8)  // Flag register in from the bus
+#define HLT     (1 << 7)  // Halt
+#define MI      (1 << 6)  // Memory register in from the bus
+#define RI      (1 << 5)  // RAM content in from the bus
+#define RO      (1 << 4)  // RAM content out to the bus
+#define IO      (1 << 3)  // Instruction regsiter out to the bus
+#define II      (1 << 2)  // Instruction regsiter in from the bus
+#define AI      (1 << 1)  // Regsiter A in from the bus
+#define AO      (1 << 0)  // Regsiter A out to the bus
+#define NOP     0         // No operation
 
 #define OPCODE_COUNT       16
 #define MICROINSTR_COUNT   5
@@ -265,26 +265,49 @@ void program7SegmentDispay()
  */
 int MicroCode[OPCODE_COUNT][MICROINSTR_COUNT] =
 {
-    /* 4b'0000 NOP */ { CO | MI, RO | II | CE, NOP,     NOP,     NOP     },
-    /* 4b'0001 LDA */ { CO | MI, RO | II | CE, IO | MI, RO | AI, NOP     },
-    /* 4b'0010 ADD */ { CO | MI, RO | II | CE, IO | MI, RO | BI, EO | AI },
-    /* 4b'0011 OUT */ { CO | MI, RO | II | CE, AO | OI, NOP,     NOP     },
-    /* 4b'0100 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'0101 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'0110 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'0111 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1000 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1001 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1010 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1011 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1100 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1101 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1110 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
-    /* 4b'1111 HLT */ { HLT,     HLT,          HLT,     HLT,     HLT     },
+    /* 4b'0000 NOP */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ NOP,   /*4*/ NOP,   /*5*/ NOP      },
+    /* 4b'0001 LDA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|AI, /*5*/ NOP      },
+    /* 4b'0010 ADD */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|BI, /*5*/ EO|AI    },
+    /* 4b'0011 SUB */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|BI, /*5*/ EO|AI|SU },
+    /* 4b'0100 STA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ AO|RI, /*5*/ NOP      },
+    /* 4b'0101 LDI */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|AI, /*4*/ NOP,   /*5*/ NOP      },
+    /* 4b'0110 JMP */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|J,  /*4*/ NOP,   /*5*/ NOP      },
+    /* 4b'0111 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1000 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1001 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1010 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1011 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1100 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1101 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'1110 OUT */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ AO|OI, /*4*/ NOP,   /*5*/ NOP      },
+    /* 4b'1111 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
 };
+
+/**
+ * Example program 1, starts at address 0: 
+ * 
+ * 0: LDA  14      ; 8b'0001_1110 Load byte from address 14 into register A
+ * 1: ADD  15      ; 8b'0010_1111 Add byte from address 15 to register A
+ * 2: OUT          ; 8b'1110_0000 Output to the 7-segment display
+ * 3: HLT          ; 8b'1111_0000 Halt
+ * 
+ */
+
+/**
+ * Example program 2, starts at address 0: 
+ * 
+ * 0: LDI  3       ; 8b'0101_0011 Load 3 into register A
+ * 1: STA  15      ; 8b'0100_1111 Store byte from register A to address 15
+ * 2: LDI  0       ; 8b'0101_0000 Load 0 into register A
+ * 3: ADD  15      ; 8b'0010_1111 Add byte from address 15 to register A
+ * 4: OUT          ; 8b'1110_0000 Output to the 7-segment display
+ * 5: JMP  3       ; 8b'0110_0011 Jump to the instruction at the address 3 (ADD 15)
+ * 
+ */
 
 void programMicrocode()
 {
+
     for (unsigned opcode = 0; opcode < OPCODE_COUNT; ++opcode)
     {
         for (unsigned microInstrIdx = 0; microInstrIdx < MICROINSTR_COUNT; ++microInstrIdx)
