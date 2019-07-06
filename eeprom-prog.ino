@@ -262,6 +262,10 @@ void program7SegmentDispay()
  * Each instruction contains instruction opcode in the 4 MSB bits and
  * may contain memory address in the 4 LSB bits. Thus 16 bytes of memory
  * can be addressed.
+ * 
+ * Storing from register A to RAM (STA) uses AO, AO|RI for the 4nd and the 5th
+ * clock cycles to maintain the content of the bus as RI is activated upon a
+ * clock pulse and may catch the empty bus in a transient state.
  */
 int MicroCode[OPCODE_COUNT][MICROINSTR_COUNT] =
 {
@@ -269,7 +273,7 @@ int MicroCode[OPCODE_COUNT][MICROINSTR_COUNT] =
     /* 4b'0001 LDA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|AI, /*5*/ NOP      },
     /* 4b'0010 ADD */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|BI, /*5*/ EO|AI    },
     /* 4b'0011 SUB */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|BI, /*5*/ EO|AI|SU },
-    /* 4b'0100 STA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ AO|RI, /*5*/ NOP      },
+    /* 4b'0100 STA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ AO,    /*5*/ AO|RI    },
     /* 4b'0101 LDI */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|AI, /*4*/ NOP,   /*5*/ NOP      },
     /* 4b'0110 JMP */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|J,  /*4*/ NOP,   /*5*/ NOP      },
     /* 4b'0111 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
