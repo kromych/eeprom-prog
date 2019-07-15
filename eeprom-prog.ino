@@ -253,8 +253,12 @@ void program7SegmentDispay()
 #define AO      (1 << 0)  // Regsiter A out to the bus
 #define NOP     0         // No operation
 
+#define JC      0b0111
+#define JZ      0b1000
+
 #define OPCODE_COUNT       16
 #define MICROINSTR_COUNT   5
+#define FLAGS_MAX          4    // 00, 01, 10, 11 for CF and ZF
 
 /**
  * Micro-code for the Instruction Set Architecture as
@@ -266,25 +270,29 @@ void program7SegmentDispay()
  * Storing from register A to RAM (STA) uses AO, AO|RI for the 4nd and the 5th
  * clock cycles to maintain the content of the bus as RI is activated upon a
  * clock pulse and may catch the empty bus in a transient state.
+ * 
+ * The code below replicates that in the EEPROM for each flag combination (00, 01, 10, 11)
+ * patching stage 2 of JC and JZ to IO|J if the jump should be taken.
+ * 
  */
 int MicroCode[OPCODE_COUNT][MICROINSTR_COUNT] =
 {
-    /* 4b'0000 NOP */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ NOP,   /*4*/ NOP,   /*5*/ NOP      },
-    /* 4b'0001 LDA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|AI, /*5*/ NOP      },
-    /* 4b'0010 ADD */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|BI, /*5*/ EO|AI    },
-    /* 4b'0011 SUB */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ RO|BI, /*5*/ EO|AI|SU },
-    /* 4b'0100 STA */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|MI, /*4*/ AO,    /*5*/ AO|RI    },
-    /* 4b'0101 LDI */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|AI, /*4*/ NOP,   /*5*/ NOP      },
-    /* 4b'0110 JMP */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ IO|J,  /*4*/ NOP,   /*5*/ NOP      },
-    /* 4b'0111 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1000 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1001 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1010 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1011 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1100 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1101 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
-    /* 4b'1110 OUT */ { /*1*/ CO|MI, /*2*/ RO|II|CE, /*3*/ AO|OI, /*4*/ NOP,   /*5*/ NOP      },
-    /* 4b'1111 HLT */ { /*1*/ HLT,   /*2*/ HLT,      /*3*/ HLT,   /*4*/ HLT,   /*5*/ HLT      },
+    /* 4b'0000 NOP */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ NOP,   /*3*/ NOP,   /*4*/ NOP         },
+    /* 4b'0001 LDA */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ IO|MI, /*3*/ RO|AI, /*4*/ NOP         },
+    /* 4b'0010 ADD */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ IO|MI, /*3*/ RO|BI, /*4*/ EO|AI|FI    },
+    /* 4b'0011 SUB */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ IO|MI, /*3*/ RO|BI, /*4*/ EO|AI|SU|FI },
+    /* 4b'0100 STA */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ IO|MI, /*3*/ AO,    /*4*/ AO|RI       },
+    /* 4b'0101 LDI */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ IO|AI, /*3*/ NOP,   /*4*/ NOP         },
+    /* 4b'0110 JMP */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ IO|J,  /*3*/ NOP,   /*4*/ NOP         },
+    /* 4b'0111 JC  */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ NOP,   /*3*/ NOP,   /*4*/ NOP         },
+    /* 4b'1000 JZ  */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ NOP,   /*3*/ NOP,   /*4*/ NOP         },
+    /* 4b'1001 HLT */ { /*0*/ HLT,   /*1*/ HLT,      /*2*/ HLT,   /*3*/ HLT,   /*4*/ HLT         },
+    /* 4b'1010 HLT */ { /*0*/ HLT,   /*1*/ HLT,      /*2*/ HLT,   /*3*/ HLT,   /*4*/ HLT         },
+    /* 4b'1011 HLT */ { /*0*/ HLT,   /*1*/ HLT,      /*2*/ HLT,   /*3*/ HLT,   /*4*/ HLT         },
+    /* 4b'1100 HLT */ { /*0*/ HLT,   /*1*/ HLT,      /*2*/ HLT,   /*3*/ HLT,   /*4*/ HLT         },
+    /* 4b'1101 HLT */ { /*0*/ HLT,   /*1*/ HLT,      /*2*/ HLT,   /*3*/ HLT,   /*4*/ HLT         },
+    /* 4b'1110 OUT */ { /*0*/ CO|MI, /*1*/ RO|II|CE, /*2*/ AO|OI, /*3*/ NOP,   /*4*/ NOP         },
+    /* 4b'1111 HLT */ { /*0*/ HLT,   /*1*/ HLT,      /*2*/ HLT,   /*3*/ HLT,   /*4*/ HLT         },
 };
 
 /**
@@ -311,38 +319,62 @@ int MicroCode[OPCODE_COUNT][MICROINSTR_COUNT] =
 
 void programMicrocode()
 {
-
-    for (unsigned opcode = 0; opcode < OPCODE_COUNT; ++opcode)
+    for (unsigned flags = 0; flags < FLAGS_MAX; ++flags)
     {
-        for (unsigned microInstrIdx = 0; microInstrIdx < MICROINSTR_COUNT; ++microInstrIdx)
+        int cf = flags & 2;
+        int zf = flags & 1;
+
+        int offset = flags << 8;
+
+        for (unsigned opcode = 0; opcode < OPCODE_COUNT; ++opcode)
         {
-            // Compute address of the least significant byte of the control word 
-            // in the microcode
+            for (unsigned microInstrIdx = 0; microInstrIdx < MICROINSTR_COUNT; ++microInstrIdx)
+            {
+                // Compute address of the least significant byte of the control word 
+                // in the microcode
 
-            int addressLow = microInstrIdx | (opcode << 3);
+                int addressLow = microInstrIdx | (opcode << 3);
 
-            int controlWord = MicroCode[opcode][microInstrIdx];
+                int controlWord = MicroCode[opcode][microInstrIdx];
 
-            // LSB of the control word
+                // patch the stage 2 for the flags instructions
 
-            int controlWordLsb = controlWord & 0xff;
+                if (microInstrIdx == 2)
+                {
+                  if (opcode == JC && cf)
+                  {
+                      // Jump if the flag bit is set
+                      controlWord = IO|J;    
+                  }
+  
+                  if (opcode == JZ && zf)
+                  {
+                      // Jump if the flag bit is set
+                      controlWord = IO|J;    
+                  }
+                }
 
-            // Write LSB
+                // LSB of the control word
 
-            writeEEPROM(addressLow, controlWordLsb);
+                int controlWordLsb = controlWord & 0xff;
 
-            // Compute address of the most significant byte of the control word 
-            // in the microcode
+                // Write LSB
 
-            int addressHigh = 128 + addressLow;
+                writeEEPROM(offset + addressLow, controlWordLsb);
 
-            // MSB of the control word
+                // Compute address of the most significant byte of the control word 
+                // in the microcode
 
-            int controlWordMsb = (controlWord >> 8) & 0xff;
+                int addressHigh = 128 + addressLow;
 
-            // Write MSB
+                // MSB of the control word
 
-            writeEEPROM(addressHigh, controlWordMsb);
+                int controlWordMsb = (controlWord >> 8) & 0xff;
+
+                // Write MSB
+
+                writeEEPROM(offset + addressHigh, controlWordMsb);
+            }
         }
     }
 };
